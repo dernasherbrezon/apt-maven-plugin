@@ -7,7 +7,7 @@ class ControlFile {
 
 	private String packageName;
 	private String version;
-	private String arch;
+	private Architecture arch;
 	private String contents;
 
 	private final Map<String, String> payload = new HashMap<String, String>();
@@ -40,11 +40,11 @@ class ControlFile {
 		this.version = version;
 	}
 
-	public String getArch() {
+	public Architecture getArch() {
 		return arch;
 	}
 
-	public void setArch(String arch) {
+	public void setArch(Architecture arch) {
 		this.arch = arch;
 	}
 
@@ -69,7 +69,7 @@ class ControlFile {
 				continue;
 			}
 			if (parts[0].equalsIgnoreCase("Architecture")) {
-				setArch(value);
+				setArch(Architecture.valueOf(value));
 				continue;
 			}
 		}

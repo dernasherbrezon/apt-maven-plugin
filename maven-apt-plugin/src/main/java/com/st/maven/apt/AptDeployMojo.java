@@ -127,9 +127,9 @@ public class AptDeployMojo extends AbstractMojo {
 			w.connect(repositoryForWagon, info);
 
 			File amd64PackagesFile = File.createTempFile("apt", "amd64Packages");
-			Packages amd64Packages = loadPackages(w, amd64PackagesFile, "amd64");
+			Packages amd64Packages = loadPackages(w, amd64PackagesFile, Architecture.amd64);
 			File i386PackagesFile = File.createTempFile("apt", "i386Packages");
-			Packages i386Packages = loadPackages(w, i386PackagesFile, "i386");
+			Packages i386Packages = loadPackages(w, i386PackagesFile, Architecture.i386);
 
 			for (File f : deb) {
 				ControlFile controlFile = readControl(f);
@@ -147,12 +147,10 @@ public class AptDeployMojo extends AbstractMojo {
 				} catch (Exception e) {
 					throw new MojoExecutionException("unable to calculate checksum for: " + f.getAbsolutePath(), e);
 				}
-				if (controlFile.getArch().equals("amd64")) {
+				if (amd64Packages.getArchitecture().supports(controlFile.getArch())) {
 					amd64Packages.add(controlFile);
-				} else if (controlFile.getArch().equals("i386")) {
-					i386Packages.add(controlFile);
-				} else if (controlFile.getArch().equals("any") || controlFile.getArch().equals("all")) {
-					amd64Packages.add(controlFile);
+				}
+				if (i386Packages.getArchitecture().supports(controlFile.getArch())) {
 					i386Packages.add(controlFile);
 				}
 				getLog().info("uploading: " + f.getAbsolutePath());
@@ -217,7 +215,7 @@ public class AptDeployMojo extends AbstractMojo {
 		w.put(packagesFile, getPackagesPath(packages.getArchitecture()));
 	}
 
-	private Packages loadPackages(Wagon w, File packagesFile, String architecture) throws MojoExecutionException {
+	private Packages loadPackages(Wagon w, File packagesFile, Architecture architecture) throws MojoExecutionException {
 		Packages packages = new Packages();
 		packages.setArchitecture(architecture);
 		InputStream fis = null;
@@ -293,12 +291,12 @@ public class AptDeployMojo extends AbstractMojo {
 		return release;
 	}
 
-	private String getPackagesBasePath(String architecture) {
-		String packagesBaseFilename = component + "/binary-" + architecture + "/Packages.gz";
+	private String getPackagesBasePath(Architecture architecture) {
+		String packagesBaseFilename = component + "/binary-" + architecture.name() + "/Packages.gz";
 		return packagesBaseFilename;
 	}
 
-	private String getPackagesPath(String architecture) {
+	private String getPackagesPath(Architecture architecture) {
 		String packagesFilename = "dists/" + codename + "/" + getPackagesBasePath(architecture);
 		return packagesFilename;
 	}

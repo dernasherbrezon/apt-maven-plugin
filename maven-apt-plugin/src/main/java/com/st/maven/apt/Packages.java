@@ -12,7 +12,7 @@ import java.util.Map;
 
 class Packages {
 
-	private String architecture;
+	private Architecture architecture;
 	private final Map<String, ControlFile> contents = new HashMap<String, ControlFile>();
 
 	void load(InputStream is) throws IOException {
@@ -46,11 +46,11 @@ class Packages {
 		contents.put(file.getPackageName(), file);
 	}
 	
-	public void setArchitecture(String architecture) {
+	public void setArchitecture(Architecture architecture) {
 		this.architecture = architecture;
 	}
 	
-	public String getArchitecture() {
+	public Architecture getArchitecture() {
 		return architecture;
 	}
 	
