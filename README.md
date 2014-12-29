@@ -18,15 +18,34 @@ To publish .deb artifacts into apt-repository a distribution section must be con
 </distributionManagement>
 ```
 
-Also `maven-apt-plugin` must be configured:
+Then configure maven repository to search for `maven-apt-plugin`:
+
+```
+<repositories>
+  <repository>
+    <id>maven-apt-plugin repository</id>
+    <url>https://raw.githubusercontent.com/dernasherbrezon/maven-apt-plugin/mvn-repo/</url>
+  </repository>
+</repositories>
+```
+
+Finally configure `maven-apt-plugin`:
 
 ```
 <plugins>
 ...
   <plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-deploy-plugin</artifactId>
+    <groupId>com.st.maven</groupId>
+    <artifactId>maven-apt-plugin</artifactId>
     <version>1.0</version>
+    <executions>
+      <execution>
+        <id>deploy</id>
+        <goals>
+          <goal>deploy</goal>
+        </goals>
+      </execution>
+    </executions>
     <configuration>
       <component>main</component> <!-- Required. Example: main restricted universe. -->
       <codename>repo</codename> <!-- Required. Example: mycompany, repo -->
