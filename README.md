@@ -1,6 +1,6 @@
 # maven-apt-plugin
 
-This plugin deploys .deb artifacts into apt repository. 
+This plugin deploys .deb artifacts into apt repository. It searches for attached artifacts which end with `.deb` extension. 
 
 ## 
 
@@ -65,6 +65,13 @@ Finally configure `maven-apt-plugin`:
 
 
 ## Hints
+
+It is possible to specify `.deb` file using command line. Configuration will be taken from `pom.xml`:
+
+```
+mvn apt:deploy -Dmaven.apt.file=target/file.deb
+```
+
 
 Works perfectly with [aws-maven](https://github.com/spring-projects/aws-maven "aws-maven"). Just configure distribution section to use `s3://bucketname`.
 
