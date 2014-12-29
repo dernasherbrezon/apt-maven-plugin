@@ -30,6 +30,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.ConnectionException;
+import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.repository.Repository;
@@ -92,26 +93,11 @@ public class AptDeployMojo extends AbstractMojo {
 			getLog().info("Skipping artifact deployment");
 			return;
 		}
-		List<Artifact> attachedArtefacts = project.getAttachedArtifacts();
-		List<File> deb = new ArrayList<File>();
-		for (Artifact cur : attachedArtefacts) {
-			if (cur.getType().equals("deb")) {
-				deb.add(cur.getFile());
-			}
-		}
-		if (file != null && file.trim().length() != 0) {
-			File f = new File(file);
-			if (!f.exists()) {
-				throw new MojoExecutionException("specified file not found: " + f.getAbsolutePath());
-			}
-			deb.add(f);
-		}
+		List<File> deb = getDebFiles();
 		if (deb.isEmpty()) {
 			getLog().info("\"deb\" artifacts not found. skipping");
 			return;
 		}
-
-
 
 		ArtifactRepository repository = project.getDistributionManagementArtifactRepository();
 		if (repository == null) {
@@ -141,58 +127,26 @@ public class AptDeployMojo extends AbstractMojo {
 			File packagesFile = File.createTempFile("apt", "packagesOld");
 			String packagesBaseFilename = component + "/binary-amd64/Packages.gz";
 			String packagesFilename = "dists/" + codename + "/" + packagesBaseFilename;
-			w.get(packagesFilename, packagesFile);
 
 			Packages packages = new Packages();
-			if (packagesFile.exists()) {
-				InputStream fis = null;
-				try {
-					fis = new GZIPInputStream(new FileInputStream(packagesFile));
-					packages.load(fis);
-				} catch (Exception e) {
-					throw new MojoExecutionException("unable to load Packages.gz from: " + packagesFile.getAbsolutePath(), e);
-				} finally {
-					if (fis != null) {
-						try {
-							fis.close();
-						} catch (IOException e) {
-							getLog().error("unable to close cursor", e);
-						}
+			InputStream fis = null;
+			try {
+				w.get(packagesFilename, packagesFile);
+				fis = new GZIPInputStream(new FileInputStream(packagesFile));
+				packages.load(fis);
+			} catch (ResourceDoesNotExistException e) {
+				getLog().info("Packages.gz do not exist. creating...");
+			} catch (Exception e) {
+				throw new MojoExecutionException("unable to load Packages.gz from: " + packagesFile.getAbsolutePath(), e);
+			} finally {
+				if (fis != null) {
+					try {
+						fis.close();
+					} catch (IOException e) {
+						getLog().error("unable to close cursor", e);
 					}
 				}
 			}
-
-			File releaseFile = File.createTempFile("apt", "releaseFile");
-			String releaseFilename = "dists/" + codename + "/Release";
-			w.get(releaseFilename, releaseFile);
-
-			Release release = new Release();
-			if (releaseFile.exists()) {
-				FileInputStream fis = null;
-				try {
-					fis = new FileInputStream(releaseFile);
-					release.load(fis);
-				} catch (Exception e) {
-					throw new MojoExecutionException("unable to read Release from: " + releaseFile.getAbsolutePath(), e);
-				} finally {
-					if (fis != null) {
-						try {
-							fis.close();
-						} catch (IOException e) {
-							getLog().error("unable to close cursor", e);
-						}
-					}
-				}
-			} else {
-				release.setArchitectures("amd64");
-				release.setCodename(codename);
-				release.setComponents(component);
-				release.setLabel(codename);
-				release.setOrigin(codename);
-			}
-			SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
-			sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-			release.setDate(sdf.format(new Date()));
 
 			for (File f : deb) {
 				String control = readControl(f);
@@ -203,7 +157,7 @@ public class AptDeployMojo extends AbstractMojo {
 				controlFile.load(control);
 				String relativeFilename = "pool/" + component + "/" + controlFile.getPackageName().charAt(0) + "/" + controlFile.getPackageName() + "/" + controlFile.getPackageName() + "_" + controlFile.getVersion() + "_" + controlFile.getArch() + ".deb";
 				try {
-					FileInfo fileInfo = encode(f);
+					FileInfo fileInfo = getFileInfo(f);
 					controlFile.append("Filename: " + relativeFilename);
 					controlFile.append("Size: " + fileInfo.getSize());
 					controlFile.append("MD5sum: " + fileInfo.getMd5());
@@ -213,16 +167,14 @@ public class AptDeployMojo extends AbstractMojo {
 					throw new MojoExecutionException("unable to calculate checksum for: " + f.getAbsolutePath(), e);
 				}
 				packages.add(controlFile);
+				getLog().info("uploading: " + f.getAbsolutePath());
 				w.put(f, relativeFilename);
-//				File destinationFile = new File(baseDir, relativeFilename);
-//				copy(f, destinationFile);
 			}
 
 			OutputStream fos = null;
 			try {
 				fos = new GZIPOutputStream(new FileOutputStream(packagesFile));
 				packages.save(fos);
-				w.put(packagesFile, packagesFilename);
 			} catch (Exception e) {
 				throw new MojoExecutionException("unable to write packages", e);
 			} finally {
@@ -235,8 +187,16 @@ public class AptDeployMojo extends AbstractMojo {
 				}
 			}
 
+			getLog().info("uploading: Packages.gz");
+			w.put(packagesFile, packagesFilename);
+
+			File releaseFile = File.createTempFile("apt", "releaseFile");
+			String releaseFilename = getReleasePath();
+
+			Release release = loadRelease(w, releaseFile);
+
 			try {
-				FileInfo packagesFileInfo = encode(packagesFile);
+				FileInfo packagesFileInfo = getFileInfo(packagesFile);
 				packagesFileInfo.setFilename(packagesBaseFilename);
 				release.getFiles().add(packagesFileInfo);
 			} catch (Exception e) {
@@ -246,7 +206,6 @@ public class AptDeployMojo extends AbstractMojo {
 			try {
 				fos = new FileOutputStream(releaseFile);
 				release.save(fos);
-				w.put(releaseFile, releaseFilename);
 			} catch (Exception e) {
 				throw new MojoExecutionException("unable to write releases", e);
 			} finally {
@@ -257,7 +216,11 @@ public class AptDeployMojo extends AbstractMojo {
 						getLog().error("unable to close cursor", e);
 					}
 				}
-			}			
+			}
+
+			getLog().info("uploading: Release");
+			w.put(releaseFile, releaseFilename);
+
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to process", e);
 		} finally {
@@ -270,44 +233,61 @@ public class AptDeployMojo extends AbstractMojo {
 
 	}
 
-//	private void copy(File src, File dest) throws MojoExecutionException {
-//		FileInputStream fis = null;
-//		FileOutputStream fos = null;
-//		try {
-//			fis = new FileInputStream(src);
-//			fos = new FileOutputStream(dest);
-//			IOUtils.copy(fis, fos);
-//		} catch (Exception e) {
-//			throw new MojoExecutionException("unable to copy from: " + src.getAbsolutePath() + " to: " + dest.getAbsolutePath(), e);
-//		} finally {
-//			if (fis != null) {
-//				try {
-//					fis.close();
-//				} catch (IOException e) {
-//					getLog().error("unable to close cursor", e);
-//				}
-//			}
-//			if (fos != null) {
-//				try {
-//					fos.close();
-//				} catch (IOException e) {
-//					getLog().error("unable to close cursor", e);
-//				}
-//			}
-//		}
-//	}
+	private Release loadRelease(Wagon w, File releaseFile) throws MojoExecutionException {
+		InputStream fis = null;
+		Release release = new Release();
+		try {
+			w.get(getReleasePath(), releaseFile);
+			fis = new FileInputStream(releaseFile);
+			release.load(fis);
+		} catch (ResourceDoesNotExistException e) {
+			getLog().info("Release do not exist. creating...");
+			release.setArchitectures("amd64");
+			release.setCodename(codename);
+			release.setComponents(component);
+			release.setLabel(codename);
+			release.setOrigin(codename);
+		} catch (Exception e) {
+			throw new MojoExecutionException("unable to read Release from: " + releaseFile.getAbsolutePath(), e);
+		} finally {
+			if (fis != null) {
+				try {
+					fis.close();
+				} catch (IOException e) {
+					getLog().error("unable to close cursor", e);
+				}
+			}
+		}
+		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		release.setDate(sdf.format(new Date()));
+		return release;
+	}
 
-	// Package: checkware
-	// Version: 20141226192208
-	// Section: java
-	// Priority: standard
-	// Architecture: all
-	// Maintainer: Aerse <info@aerse.com>
-	// Depends: logrotate (>=3.7.8), nginx, openjdk-7-jre, service-wrapper
-	// Description: Aerse
-	// https://aerse.com site
+	private String getReleasePath() {
+		String releaseFilename = "dists/" + codename + "/Release";
+		return releaseFilename;
+	}
 
-	private static FileInfo encode(File f) throws Exception {
+	private List<File> getDebFiles() throws MojoExecutionException {
+		List<Artifact> attachedArtefacts = project.getAttachedArtifacts();
+		List<File> deb = new ArrayList<File>();
+		for (Artifact cur : attachedArtefacts) {
+			if (cur.getType().equals("deb")) {
+				deb.add(cur.getFile());
+			}
+		}
+		if (file != null && file.trim().length() != 0) {
+			File f = new File(file);
+			if (!f.exists()) {
+				throw new MojoExecutionException("specified file not found: " + f.getAbsolutePath());
+			}
+			deb.add(f);
+		}
+		return deb;
+	}
+
+	private static FileInfo getFileInfo(File f) throws Exception {
 		FileInfo result = new FileInfo();
 		result.setSize(String.valueOf(f.length()));
 		BufferedInputStream bis = null;
