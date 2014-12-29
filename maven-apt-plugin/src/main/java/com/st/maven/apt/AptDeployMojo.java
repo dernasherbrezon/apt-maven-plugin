@@ -42,6 +42,7 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 /**
  * @goal deploy
  * @phase deploy
+ * @threadSafe false
  */
 public class AptDeployMojo extends AbstractMojo {
 
