@@ -31,8 +31,10 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.ConnectionException;
 import org.apache.maven.wagon.ResourceDoesNotExistException;
+import org.apache.maven.wagon.TransferFailedException;
 import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
+import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.repository.Repository;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
@@ -125,40 +127,18 @@ public class AptDeployMojo extends AbstractMojo {
 			w.connect(repositoryForWagon, info);
 
 			File packagesFile = File.createTempFile("apt", "packagesOld");
-			String packagesBaseFilename = component + "/binary-amd64/Packages.gz";
-			String packagesFilename = "dists/" + codename + "/" + packagesBaseFilename;
 
-			Packages packages = new Packages();
-			InputStream fis = null;
-			try {
-				w.get(packagesFilename, packagesFile);
-				fis = new GZIPInputStream(new FileInputStream(packagesFile));
-				packages.load(fis);
-			} catch (ResourceDoesNotExistException e) {
-				getLog().info("Packages.gz do not exist. creating...");
-			} catch (Exception e) {
-				throw new MojoExecutionException("unable to load Packages.gz from: " + packagesFile.getAbsolutePath(), e);
-			} finally {
-				if (fis != null) {
-					try {
-						fis.close();
-					} catch (IOException e) {
-						getLog().error("unable to close cursor", e);
-					}
-				}
-			}
+			Packages packages = loadPackages(w, packagesFile);
 
 			for (File f : deb) {
-				String control = readControl(f);
-				if (control == null) {
+				ControlFile controlFile = readControl(f);
+				if (controlFile == null) {
 					throw new MojoExecutionException("invalid .deb format. Missing control file: " + f.getAbsolutePath());
 				}
-				ControlFile controlFile = new ControlFile();
-				controlFile.load(control);
-				String relativeFilename = "pool/" + component + "/" + controlFile.getPackageName().charAt(0) + "/" + controlFile.getPackageName() + "/" + controlFile.getPackageName() + "_" + controlFile.getVersion() + "_" + controlFile.getArch() + ".deb";
+				String path = "pool/" + component + "/" + controlFile.getPackageName().charAt(0) + "/" + controlFile.getPackageName() + "/" + controlFile.getPackageName() + "_" + controlFile.getVersion() + "_" + controlFile.getArch() + ".deb";
 				try {
 					FileInfo fileInfo = getFileInfo(f);
-					controlFile.append("Filename: " + relativeFilename);
+					controlFile.append("Filename: " + path);
 					controlFile.append("Size: " + fileInfo.getSize());
 					controlFile.append("MD5sum: " + fileInfo.getMd5());
 					controlFile.append("SHA1: " + fileInfo.getSha1());
@@ -168,58 +148,24 @@ public class AptDeployMojo extends AbstractMojo {
 				}
 				packages.add(controlFile);
 				getLog().info("uploading: " + f.getAbsolutePath());
-				w.put(f, relativeFilename);
+				w.put(f, path);
 			}
 
-			OutputStream fos = null;
-			try {
-				fos = new GZIPOutputStream(new FileOutputStream(packagesFile));
-				packages.save(fos);
-			} catch (Exception e) {
-				throw new MojoExecutionException("unable to write packages", e);
-			} finally {
-				if (fos != null) {
-					try {
-						fos.close();
-					} catch (IOException e) {
-						getLog().error("unable to close cursor", e);
-					}
-				}
-			}
-
-			getLog().info("uploading: Packages.gz");
-			w.put(packagesFile, packagesFilename);
+			uploadPackages(w, packagesFile, packages);
 
 			File releaseFile = File.createTempFile("apt", "releaseFile");
-			String releaseFilename = getReleasePath();
 
 			Release release = loadRelease(w, releaseFile);
 
 			try {
 				FileInfo packagesFileInfo = getFileInfo(packagesFile);
-				packagesFileInfo.setFilename(packagesBaseFilename);
+				packagesFileInfo.setFilename(getPackagesBasePath());
 				release.getFiles().add(packagesFileInfo);
 			} catch (Exception e) {
 				throw new MojoExecutionException("unable to calculate checksum for: " + packagesFile.getAbsolutePath(), e);
 			}
 
-			try {
-				fos = new FileOutputStream(releaseFile);
-				release.save(fos);
-			} catch (Exception e) {
-				throw new MojoExecutionException("unable to write releases", e);
-			} finally {
-				if (fos != null) {
-					try {
-						fos.close();
-					} catch (IOException e) {
-						getLog().error("unable to close cursor", e);
-					}
-				}
-			}
-
-			getLog().info("uploading: Release");
-			w.put(releaseFile, releaseFilename);
+			uploadRelease(w, releaseFile, release);
 
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to process", e);
@@ -231,6 +177,71 @@ public class AptDeployMojo extends AbstractMojo {
 			}
 		}
 
+	}
+
+	private void uploadPackages(Wagon w, File packagesFile, Packages packages) throws MojoExecutionException, TransferFailedException, ResourceDoesNotExistException, AuthorizationException {
+		OutputStream fos = null;
+		try {
+			fos = new GZIPOutputStream(new FileOutputStream(packagesFile));
+			packages.save(fos);
+		} catch (Exception e) {
+			throw new MojoExecutionException("unable to write packages", e);
+		} finally {
+			if (fos != null) {
+				try {
+					fos.close();
+				} catch (IOException e) {
+					getLog().error("unable to close cursor", e);
+				}
+			}
+		}
+
+		getLog().info("uploading: Packages.gz");
+		w.put(packagesFile, getPackagesPath());
+	}
+
+	private Packages loadPackages(Wagon w, File packagesFile) throws MojoExecutionException {
+		Packages packages = new Packages();
+		InputStream fis = null;
+		try {
+			w.get(getPackagesPath(), packagesFile);
+			fis = new GZIPInputStream(new FileInputStream(packagesFile));
+			packages.load(fis);
+		} catch (ResourceDoesNotExistException e) {
+			getLog().info("Packages.gz do not exist. creating...");
+		} catch (Exception e) {
+			throw new MojoExecutionException("unable to load Packages.gz from: " + packagesFile.getAbsolutePath(), e);
+		} finally {
+			if (fis != null) {
+				try {
+					fis.close();
+				} catch (IOException e) {
+					getLog().error("unable to close cursor", e);
+				}
+			}
+		}
+		return packages;
+	}
+
+	private void uploadRelease(Wagon w, File releaseFile, Release release) throws MojoExecutionException, TransferFailedException, ResourceDoesNotExistException, AuthorizationException {
+		OutputStream fos = null;
+		try {
+			fos = new FileOutputStream(releaseFile);
+			release.save(fos);
+		} catch (Exception e) {
+			throw new MojoExecutionException("unable to write releases", e);
+		} finally {
+			if (fos != null) {
+				try {
+					fos.close();
+				} catch (IOException e) {
+					getLog().error("unable to close cursor", e);
+				}
+			}
+		}
+
+		getLog().info("uploading: Release");
+		w.put(releaseFile, getReleasePath());
 	}
 
 	private Release loadRelease(Wagon w, File releaseFile) throws MojoExecutionException {
@@ -262,6 +273,16 @@ public class AptDeployMojo extends AbstractMojo {
 		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		release.setDate(sdf.format(new Date()));
 		return release;
+	}
+
+	private String getPackagesBasePath() {
+		String packagesBaseFilename = component + "/binary-amd64/Packages.gz";
+		return packagesBaseFilename;
+	}
+
+	private String getPackagesPath() {
+		String packagesFilename = "dists/" + codename + "/" + getPackagesBasePath();
+		return packagesFilename;
 	}
 
 	private String getReleasePath() {
@@ -317,7 +338,7 @@ public class AptDeployMojo extends AbstractMojo {
 		return result;
 	}
 
-	private String readControl(File deb) throws MojoExecutionException {
+	private ControlFile readControl(File deb) throws MojoExecutionException {
 		ArArchiveEntry entry;
 		TarArchiveEntry control_entry;
 		ArchiveInputStream debStream = null;
@@ -334,7 +355,9 @@ public class AptDeployMojo extends AbstractMojo {
 							IOUtils.copy(control_tgz, outputStream);
 							String content_string = outputStream.toString("UTF-8");
 							outputStream.close();
-							return content_string;
+							ControlFile controlFile = new ControlFile();
+							controlFile.load(content_string);
+							return controlFile;
 						}
 					}
 				}
