@@ -1,12 +1,12 @@
 # maven-apt-plugin
 
-This plugin deploys .deb artifacts into maven distribution repository. 
+This plugin deploys .deb artifacts into apt repository. 
 
 ## 
 
 ## Usage
 
-To publish .deb artifacts into apt-repository a distribution section must be configured:
+To publish .deb artifacts a distribution section must be configured:
 
 ```
 <distributionManagement>
