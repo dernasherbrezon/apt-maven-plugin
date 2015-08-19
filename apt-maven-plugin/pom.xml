@@ -2,8 +2,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.st.maven</groupId>
-	<artifactId>maven-apt-plugin</artifactId>
-	<version>1.0</version>
+	<artifactId>apt-maven-plugin</artifactId>
+	<version>1.1</version>
 	<packaging>maven-plugin</packaging>
 	<name>deploy to apt</name>
 	<description>Deploy .deb artifacts into apt-repository. apt-repository is configured by "distribution" section in pom.xml. If there is no apt-repository, it will be created.</description>
@@ -92,7 +92,7 @@
 	                <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory> <!-- matches distribution management repository url above -->
 	                <branch>refs/heads/mvn-repo</branch>                       <!-- remote branch name -->
 	                <includes><include>**/*</include></includes>
-	                <repositoryName>maven-apt-plugin</repositoryName>      <!-- github repo name -->
+	                <repositoryName>apt-maven-plugin</repositoryName>      <!-- github repo name -->
 	                <repositoryOwner>dernasherbrezon</repositoryOwner>    <!-- github username  -->
 	            </configuration>
 	            <executions>
