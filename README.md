@@ -35,7 +35,7 @@ Finally configure `apt-maven-plugin`:
 <plugins>
 ...
   <plugin>
-    <groupId>com.st.maven</groupId>
+    <groupId>com.aerse.maven</groupId>
     <artifactId>apt-maven-plugin</artifactId>
     <version>1.1</version>
     <executions>
