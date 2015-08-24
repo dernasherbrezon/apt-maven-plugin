@@ -1,9 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aerse.maven</groupId>
 	<artifactId>apt-maven-plugin</artifactId>
-	<version>1.2-SNAPSHOT</version>
+	<version>1.3-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 	<name>deploy to apt</name>
 	<description>Deploy .deb artifacts into apt-repository. apt-repository is configured by "distribution" section in pom.xml. If there is no apt-repository, it will be created.</description>
@@ -67,6 +66,7 @@
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.6</version>
 				<extensions>true</extensions>
 				<configuration>
 					<serverId>ossrh</serverId>
@@ -164,7 +164,8 @@
 		<url>https://github.com/dernasherbrezon/apt-maven-plugin</url>
 		<connection>scm:git:git@github.com/dernasherbrezon/apt-maven-plugin.git</connection>
 		<developerConnection>scm:git:https://github.com/dernasherbrezon/apt-maven-plugin.git</developerConnection>
-	</scm>
+	  <tag>HEAD</tag>
+  </scm>
 	
 	<issueManagement>
 		<system>GitHub Issues</system>
