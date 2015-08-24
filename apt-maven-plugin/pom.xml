@@ -7,6 +7,7 @@
 	<name>deploy to apt</name>
 	<description>Deploy .deb artifacts into apt-repository. apt-repository is configured by "distribution" section in pom.xml. If there is no apt-repository, it will be created.</description>
 	<inceptionYear>2014</inceptionYear>
+	<url>https://github.com/dernasherbrezon/apt-maven-plugin</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
