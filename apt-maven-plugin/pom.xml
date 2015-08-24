@@ -1,16 +1,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.st.maven</groupId>
+	<groupId>com.aerse.maven</groupId>
 	<artifactId>apt-maven-plugin</artifactId>
-	<version>1.1</version>
+	<version>1.2-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 	<name>deploy to apt</name>
 	<description>Deploy .deb artifacts into apt-repository. apt-repository is configured by "distribution" section in pom.xml. If there is no apt-repository, it will be created.</description>
 	<inceptionYear>2014</inceptionYear>
 
 	<properties>
-		<github.global.server>github</github.global.server>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -56,6 +55,41 @@
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5</version>
+				<configuration>
+					<autoVersionSubmodules>true</autoVersionSubmodules>
+					<useReleaseProfile>false</useReleaseProfile>
+					<releaseProfiles>release</releaseProfiles>
+					<goals>deploy</goals>
+				</configuration>
+			</plugin>		
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
+					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+				</configuration>
+			</plugin>		
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+   					</execution>
+				</executions>
+			</plugin>		
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
 				<version>2.0.2</version>
 				<executions>
@@ -75,36 +109,6 @@
 					<createChecksum>true</createChecksum>
 				</configuration>
 			</plugin>
-			<plugin>
-		        <artifactId>maven-deploy-plugin</artifactId>
-		        <version>2.8.1</version>
-		        <configuration>
-		            <altDeploymentRepository>internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
-		        </configuration>
-		    </plugin>
-			<plugin>
-	            <groupId>com.github.github</groupId>
-	            <artifactId>site-maven-plugin</artifactId>
-	            <version>0.11-SNAPSHOT</version>
-	            <configuration>
-	                <message>Maven artifacts for ${project.version}</message>  <!-- git commit message -->
-	                <noJekyll>true</noJekyll>                                  <!-- disable webpage processing -->
-	                <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory> <!-- matches distribution management repository url above -->
-	                <branch>refs/heads/mvn-repo</branch>                       <!-- remote branch name -->
-	                <includes><include>**/*</include></includes>
-	                <repositoryName>apt-maven-plugin</repositoryName>      <!-- github repo name -->
-	                <repositoryOwner>dernasherbrezon</repositoryOwner>    <!-- github username  -->
-	            </configuration>
-	            <executions>
-	              <!-- run site-maven-plugin's 'site' target as part of the build's normal 'deploy' phase -->
-	              <execution>
-	                <goals>
-	                  <goal>site</goal>
-	                </goals>
-	                <phase>deploy</phase>
-	              </execution>
-	            </executions>
-	        </plugin>		    		
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-plugin-plugin</artifactId>
@@ -157,21 +161,21 @@
 	</developers>
 
 	<scm>
-		<url>https://github.com/dernasherbrezon/maven-apt-plugin</url>
-		<connection>scm:git:git@github.com/dernasherbrezon/maven-apt-plugin.git</connection>
-		<developerConnection>scm:git:https://github.com/dernasherbrezon/maven-apt-plugin.git</developerConnection>
+		<url>https://github.com/dernasherbrezon/apt-maven-plugin</url>
+		<connection>scm:git:git@github.com/dernasherbrezon/apt-maven-plugin.git</connection>
+		<developerConnection>scm:git:https://github.com/dernasherbrezon/apt-maven-plugin.git</developerConnection>
 	</scm>
 	
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>https://github.com/dernasherbrezon/maven-apt-plugin/issues</url>
+		<url>https://github.com/dernasherbrezon/apt-maven-plugin/issues</url>
 	</issueManagement>
 	
 	<distributionManagement>
-		<repository>
-			<id>internal.repo</id>
-			<name>Temporary Staging Repository</name>
-			<url>file://${project.build.directory}/mvn-repo</url>
-		</repository>
-	</distributionManagement>	
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+	
 </project>
