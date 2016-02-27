@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aerse.maven</groupId>
 	<artifactId>apt-maven-plugin</artifactId>
-	<version>1.6</version>
+	<version>1.7-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 	<name>deploy to apt</name>
 	<description>Deploy .deb artifacts into apt-repository. apt-repository is configured by "distribution" section in pom.xml. If there is no apt-repository, it will be created.</description>
