@@ -25,9 +25,14 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.gpg.AbstractGpgSigner;
+import org.apache.maven.plugin.gpg.GpgMojo;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.ConnectionException;
 import org.apache.maven.wagon.ResourceDoesNotExistException;
@@ -39,56 +44,29 @@ import org.apache.maven.wagon.repository.Repository;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 
-/**
- * @goal deploy
- * @phase deploy
- * @threadSafe false
- */
-public class AptDeployMojo extends AbstractMojo {
+@Mojo( name = "deploy", defaultPhase = LifecyclePhase.DEPLOY, threadSafe = false )
+public class AptDeployMojo extends GpgMojo {
 
-	/**
-	 * 
-	 * @parameter expression="${maven.deploy.skip}"
-	 * @readonly
-	 * @default false
-	 */
+	@Parameter( defaultValue = "${maven.deploy.skip}", readonly = true )
 	private boolean skip;
 
-	/**
-	 * The maven project.
-	 * 
-	 * @parameter expression="${project}"
-	 * @readonly
-	 */
+	@Parameter( defaultValue = "${project}", readonly = true, required = true )
 	private MavenProject project;
 
-	/**
-	 * @component
-	 */
+	@Component
 	private PlexusContainer container;
 
-	/**
-	 * 
-	 * @parameter expression="${maven.apt.file}"
-	 * @readonly
-	 */
+	@Parameter( defaultValue = "${maven.apt.file}", readonly = true )
 	private String file;
 
-	/**
-	 * 
-	 * @parameter
-	 * @readonly
-	 * @required
-	 */
+	@Parameter( readonly = true, required = true )
 	private String codename;
 
-	/**
-	 * 
-	 * @parameter
-	 * @readonly
-	 * @required
-	 */
+	@Parameter( readonly = true, required = true )
 	private String component;
+	
+	@Parameter( property = "gpg.sign", readonly = true )
+    private boolean sign;
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -127,10 +105,8 @@ public class AptDeployMojo extends AbstractMojo {
 		try {
 			w.connect(repositoryForWagon, info);
 
-			File amd64PackagesFile = File.createTempFile("apt", "amd64Packages");
-			Packages amd64Packages = loadPackages(w, amd64PackagesFile, Architecture.amd64);
-			File i386PackagesFile = File.createTempFile("apt", "i386Packages");
-			Packages i386Packages = loadPackages(w, i386PackagesFile, Architecture.i386);
+			Packages amd64Packages = loadPackages(w, Architecture.amd64);
+			Packages i386Packages = loadPackages(w, Architecture.i386);
 
 			for (File f : deb) {
 				ControlFile controlFile = readControl(f);
@@ -158,30 +134,21 @@ public class AptDeployMojo extends AbstractMojo {
 				w.put(f, path);
 			}
 
-			uploadPackages(w, amd64PackagesFile, amd64Packages);
-			uploadPackages(w, i386PackagesFile, i386Packages);
+			
+			Release release = loadRelease(w);
+
+			release.getFiles().addAll(uploadPackages(w, amd64Packages));
+			release.getFiles().addAll(uploadPackages(w, i386Packages));
 
 			File releaseFile = File.createTempFile("apt", "releaseFile");
-
-			Release release = loadRelease(w, releaseFile);
-
-			try {
-				FileInfo amd64PackagesInfo = getFileInfo(amd64PackagesFile);
-				amd64PackagesInfo.setFilename(getPackagesBasePath(amd64Packages.getArchitecture()));
-				release.getFiles().add(amd64PackagesInfo);
-			} catch (Exception e) {
-				throw new MojoExecutionException("unable to calculate checksum for: " + amd64PackagesFile.getAbsolutePath(), e);
-			}
-
-			try {
-				FileInfo i386PackagesInfo = getFileInfo(i386PackagesFile);
-				i386PackagesInfo.setFilename(getPackagesBasePath(i386Packages.getArchitecture()));
-				release.getFiles().add(i386PackagesInfo);
-			} catch (Exception e) {
-				throw new MojoExecutionException("unable to calculate checksum for: " + i386PackagesFile.getAbsolutePath(), e);
-			}
-
 			uploadRelease(w, releaseFile, release);
+
+			if (sign) {
+				AbstractGpgSigner signer = newSigner(project);
+				File releaseSignature = signer.generateSignatureForArtifact(releaseFile);
+				getLog().info("uploading: Release.gpg");
+				w.put(releaseSignature, getReleasePath() + ".gpg");
+			}
 
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to process", e);
@@ -194,11 +161,14 @@ public class AptDeployMojo extends AbstractMojo {
 		}
 
 	}
-
-	private void uploadPackages(Wagon w, File packagesFile, Packages packages) throws MojoExecutionException, TransferFailedException, ResourceDoesNotExistException, AuthorizationException {
+	
+	private List<FileInfo> uploadPackages(Wagon w, Packages packages) throws MojoExecutionException, TransferFailedException, ResourceDoesNotExistException, AuthorizationException {
 		OutputStream fos = null;
+		List<FileInfo> result = new ArrayList<FileInfo>();
+		File file;
 		try {
-			fos = new GZIPOutputStream(new FileOutputStream(packagesFile));
+			file = File.createTempFile("apt", packages.getArchitecture().name());
+			fos = new FileOutputStream(file);
 			packages.save(fos);
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to write packages", e);
@@ -212,22 +182,62 @@ public class AptDeployMojo extends AbstractMojo {
 			}
 		}
 
-		getLog().info("uploading: " + packages.getArchitecture() + "/Packages.gz");
-		w.put(packagesFile, getPackagesPath(packages.getArchitecture()));
+		try {
+			FileInfo fileInfo = getFileInfo(file);
+			fileInfo.setFilename(getPackagesBasePath(packages.getArchitecture()));
+			result.add(fileInfo);
+		} catch (Exception e) {
+			throw new MojoExecutionException("unable to calculate checksum for: " + file.getAbsolutePath(), e);
+		}
+		
+		String path = getPackagesPath(packages.getArchitecture());
+		getLog().info("uploading: " + path);
+		w.put(file, path);
+		
+		//gzipped
+		try {
+			file = File.createTempFile("apt", packages.getArchitecture().name());
+			fos = new GZIPOutputStream(new FileOutputStream(file));
+			packages.save(fos);
+		} catch (Exception e) {
+			throw new MojoExecutionException("unable to write packages", e);
+		} finally {
+			if (fos != null) {
+				try {
+					fos.close();
+				} catch (IOException e) {
+					getLog().error("unable to close cursor", e);
+				}
+			}
+		}
+
+		try {
+			FileInfo fileInfo = getFileInfo(file);
+			fileInfo.setFilename(getPackagesBasePath(packages.getArchitecture()) + ".gz");
+			result.add(fileInfo);
+		} catch (Exception e) {
+			throw new MojoExecutionException("unable to calculate checksum for: " + file.getAbsolutePath(), e);
+		}
+		
+		getLog().info("uploading: " + path + ".gz");
+		w.put(file, path + ".gz");
+		
+		return result;
 	}
 
-	private Packages loadPackages(Wagon w, File packagesFile, Architecture architecture) throws MojoExecutionException {
+	private Packages loadPackages(Wagon w, Architecture architecture) throws MojoExecutionException {
 		Packages packages = new Packages();
 		packages.setArchitecture(architecture);
 		InputStream fis = null;
 		try {
-			w.get(getPackagesPath(architecture), packagesFile);
-			fis = new GZIPInputStream(new FileInputStream(packagesFile));
+			File tempFile = File.createTempFile("packages", architecture.name());
+			w.get(getPackagesPath(architecture) + ".gz", tempFile);
+			fis = new GZIPInputStream(new FileInputStream(tempFile));
 			packages.load(fis);
 		} catch (ResourceDoesNotExistException e) {
 			getLog().info(packages.getArchitecture() + "/Packages.gz do not exist. creating...");
 		} catch (Exception e) {
-			throw new MojoExecutionException("unable to load " + packages.getArchitecture() + "/Packages.gz from: " + packagesFile.getAbsolutePath(), e);
+			throw new MojoExecutionException("unable to load " + getPackagesPath(architecture), e);
 		} finally {
 			if (fis != null) {
 				try {
@@ -261,12 +271,13 @@ public class AptDeployMojo extends AbstractMojo {
 		w.put(releaseFile, getReleasePath());
 	}
 
-	private Release loadRelease(Wagon w, File releaseFile) throws MojoExecutionException {
+	private Release loadRelease(Wagon w) throws MojoExecutionException {
 		InputStream fis = null;
 		Release release = new Release();
 		try {
-			w.get(getReleasePath(), releaseFile);
-			fis = new FileInputStream(releaseFile);
+			File tempFile = File.createTempFile("release", "file");
+			w.get(getReleasePath(), tempFile);
+			fis = new FileInputStream(tempFile);
 			release.load(fis);
 		} catch (ResourceDoesNotExistException e) {
 			getLog().info("Release do not exist. creating...");
@@ -276,7 +287,7 @@ public class AptDeployMojo extends AbstractMojo {
 			release.setLabel(codename);
 			release.setOrigin(codename);
 		} catch (Exception e) {
-			throw new MojoExecutionException("unable to read Release from: " + releaseFile.getAbsolutePath(), e);
+			throw new MojoExecutionException("unable to read Release from: " + getReleasePath(), e);
 		} finally {
 			if (fis != null) {
 				try {
@@ -293,7 +304,7 @@ public class AptDeployMojo extends AbstractMojo {
 	}
 
 	private String getPackagesBasePath(Architecture architecture) {
-		String packagesBaseFilename = component + "/binary-" + architecture.name() + "/Packages.gz";
+		String packagesBaseFilename = component + "/binary-" + architecture.name() + "/Packages";
 		return packagesBaseFilename;
 	}
 
