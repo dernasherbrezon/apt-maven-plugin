@@ -39,6 +39,7 @@ And configure `apt-maven-plugin`:
       <component>main</component> <!-- Required. Example: main restricted universe. -->
       <codename>repo</codename> <!-- Required. Example: mycompany, repo -->
       <skip>false</skip> <!-- Not required. By default: false -->
+      <sign>true</sign> <!-- Not required. By default: false. GPG-sign of "Release" file. Configuration is same as in maven-gpg-plugin -->
     </configuration>
   </plugin>
 ...
@@ -61,6 +62,7 @@ It is possible to specify `.deb` file using command line. Configuration will be 
 mvn apt:deploy -Dmaven.apt.file=target/file.deb
 ```
 
+If package was signed once (using "sign=true" option), then un-sign (using "sign=false") will cause GPG checksum failure during ```apt-get update```.  Maven Wagon doesn't support "delete" operation, so I cannot remove "Release.gpg" file from apt repository. Please remove "Release.gpg" manually if you have to stop signing.
 
 Works perfectly with [aws-maven](https://github.com/spring-projects/aws-maven "aws-maven"). Just configure distribution section to use `s3://bucketname`.
 
