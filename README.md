@@ -26,7 +26,7 @@ And configure `apt-maven-plugin`:
   <plugin>
     <groupId>com.aerse.maven</groupId>
     <artifactId>apt-maven-plugin</artifactId>
-    <version>1.5</version>
+    <version>1.7</version>
     <executions>
       <execution>
         <id>deploy</id>
