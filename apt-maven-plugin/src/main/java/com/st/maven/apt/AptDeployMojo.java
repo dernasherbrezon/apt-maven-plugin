@@ -12,7 +12,9 @@ import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -44,29 +46,29 @@ import org.apache.maven.wagon.repository.Repository;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 
-@Mojo( name = "deploy", defaultPhase = LifecyclePhase.DEPLOY, threadSafe = false )
+@Mojo(name = "deploy", defaultPhase = LifecyclePhase.DEPLOY, threadSafe = false)
 public class AptDeployMojo extends GpgMojo {
 
-	@Parameter( defaultValue = "${maven.deploy.skip}", readonly = true )
+	@Parameter(defaultValue = "${maven.deploy.skip}", readonly = true)
 	private boolean skip;
 
-	@Parameter( defaultValue = "${project}", readonly = true, required = true )
+	@Parameter(defaultValue = "${project}", readonly = true, required = true)
 	private MavenProject project;
 
 	@Component
 	private PlexusContainer container;
 
-	@Parameter( defaultValue = "${maven.apt.file}", readonly = true )
+	@Parameter(defaultValue = "${maven.apt.file}", readonly = true)
 	private String file;
 
-	@Parameter( readonly = true, required = true )
+	@Parameter(readonly = true, required = true)
 	private String codename;
 
-	@Parameter( readonly = true, required = true )
+	@Parameter(readonly = true, required = true)
 	private String component;
-	
-	@Parameter( property = "gpg.sign", readonly = true )
-    private boolean sign;
+
+	@Parameter(property = "gpg.sign", readonly = true)
+	private boolean sign;
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -105,8 +107,7 @@ public class AptDeployMojo extends GpgMojo {
 		try {
 			w.connect(repositoryForWagon, info);
 
-			Packages amd64Packages = loadPackages(w, Architecture.amd64);
-			Packages i386Packages = loadPackages(w, Architecture.i386);
+			Map<Architecture, Packages> packagesPerArch = new HashMap<Architecture, Packages>();
 
 			for (File f : deb) {
 				ControlFile controlFile = readControl(f);
@@ -124,21 +125,24 @@ public class AptDeployMojo extends GpgMojo {
 				} catch (Exception e) {
 					throw new MojoExecutionException("unable to calculate checksum for: " + f.getAbsolutePath(), e);
 				}
-				if (amd64Packages.getArchitecture().supports(controlFile.getArch())) {
-					amd64Packages.add(controlFile);
-				}
-				if (i386Packages.getArchitecture().supports(controlFile.getArch())) {
-					i386Packages.add(controlFile);
+				if (controlFile.getArch().isWildcard()) {
+					for (Architecture cur : Architecture.values()) {
+						if (cur.isWildcard()) {
+							continue;
+						}
+						addControlFile(w, cur, controlFile, packagesPerArch);
+					}
+				} else {
+					addControlFile(w, controlFile.getArch(), controlFile, packagesPerArch);
 				}
 				getLog().info("uploading: " + f.getAbsolutePath());
 				w.put(f, path);
 			}
 
-			
 			Release release = loadRelease(w);
-
-			release.getFiles().addAll(uploadPackages(w, amd64Packages));
-			release.getFiles().addAll(uploadPackages(w, i386Packages));
+			for (Packages cur : packagesPerArch.values()) {
+				release.getFiles().addAll(uploadPackages(w, cur));
+			}
 
 			File releaseFile = File.createTempFile("apt", "releaseFile");
 			uploadRelease(w, releaseFile, release);
@@ -161,7 +165,16 @@ public class AptDeployMojo extends GpgMojo {
 		}
 
 	}
-	
+
+	private void addControlFile(Wagon w, Architecture arch, ControlFile file, Map<Architecture, Packages> packagesPerArch) throws MojoExecutionException {
+		Packages curPackages = packagesPerArch.get(arch);
+		if (curPackages == null) {
+			curPackages = loadPackages(w, arch);
+			packagesPerArch.put(arch, curPackages);
+		}
+		curPackages.add(file);
+	}
+
 	private List<FileInfo> uploadPackages(Wagon w, Packages packages) throws MojoExecutionException, TransferFailedException, ResourceDoesNotExistException, AuthorizationException {
 		OutputStream fos = null;
 		List<FileInfo> result = new ArrayList<FileInfo>();
@@ -189,12 +202,12 @@ public class AptDeployMojo extends GpgMojo {
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to calculate checksum for: " + file.getAbsolutePath(), e);
 		}
-		
+
 		String path = getPackagesPath(packages.getArchitecture());
 		getLog().info("uploading: " + path);
 		w.put(file, path);
-		
-		//gzipped
+
+		// gzipped
 		try {
 			file = File.createTempFile("apt", packages.getArchitecture().name());
 			fos = new GZIPOutputStream(new FileOutputStream(file));
@@ -218,10 +231,10 @@ public class AptDeployMojo extends GpgMojo {
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to calculate checksum for: " + file.getAbsolutePath(), e);
 		}
-		
+
 		getLog().info("uploading: " + path + ".gz");
 		w.put(file, path + ".gz");
-		
+
 		return result;
 	}
 
