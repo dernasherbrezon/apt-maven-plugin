@@ -82,6 +82,11 @@ public class AptDeployMojo extends GpgMojo {
 			return;
 		}
 
+		AbstractGpgSigner signer = null;
+		if (sign) {
+			signer = newSigner(project);
+		}
+
 		ArtifactRepository repository = project.getDistributionManagementArtifactRepository();
 		if (repository == null) {
 			throw new MojoExecutionException("no repository found for distribution");
@@ -147,8 +152,7 @@ public class AptDeployMojo extends GpgMojo {
 			File releaseFile = File.createTempFile("apt", "releaseFile");
 			uploadRelease(w, releaseFile, release);
 
-			if (sign) {
-				AbstractGpgSigner signer = newSigner(project);
+			if (signer != null) {
 				File releaseSignature = signer.generateSignatureForArtifact(releaseFile);
 				getLog().info("uploading: Release.gpg");
 				w.put(releaseSignature, getReleasePath() + ".gpg");
