@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aerse.maven</groupId>
 	<artifactId>apt-maven-plugin</artifactId>
-	<version>1.9-SNAPSHOT</version>
+	<version>1.9</version>
 	<packaging>maven-plugin</packaging>
 	<name>deploy to apt</name>
 	<description>Deploy .deb artifacts into apt-repository. apt-repository is configured by "distribution" section in pom.xml. If there is no apt-repository, it will be created.</description>
@@ -89,7 +89,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>1.5</version>
+				<version>1.6</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -99,6 +99,9 @@
 						</goals>
    					</execution>
 				</executions>
+				<configuration>
+					<passphraseServerId>gpg.passphrase</passphraseServerId>
+				</configuration>
 			</plugin>		
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -185,7 +188,7 @@
 		<url>https://github.com/dernasherbrezon/apt-maven-plugin</url>
 		<connection>scm:git:git@github.com/dernasherbrezon/apt-maven-plugin.git</connection>
 		<developerConnection>scm:git:https://github.com/dernasherbrezon/apt-maven-plugin.git</developerConnection>
-	  <tag>apt-maven-plugin-1.6</tag>
+	  <tag>apt-maven-plugin-1.9</tag>
   </scm>
 	
 	<issueManagement>
