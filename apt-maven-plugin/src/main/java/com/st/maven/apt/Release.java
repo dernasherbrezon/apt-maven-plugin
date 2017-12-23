@@ -122,20 +122,22 @@ class Release {
 				continue;
 			}
 			String[] parts = splitByColon(line);
-			if (parts[0].equals("Origin")) {
-				origin = parts[1];
-			} else if (parts[0].equals("Label")) {
-				label = parts[1];
-			} else if (parts[0].equals("Codename")) {
-				codename = parts[1];
-			} else if (parts[0].equals("Date")) {
-				date = parts[1];
-			} else if (parts[0].equals("Architectures")) {
-				architectures = parts[1];
-			} else if (parts[0].equals("Components")) {
-				components = parts[1];
-			} else if (parts[0].equals("MD5Sum") || parts[0].equals("SHA1") || parts[0].equals("SHA256")) {
-				curGroup = parts[0];
+			String name = parts[0];
+			String value = parts[1].trim();
+			if (name.equals("Origin")) {
+				origin = value;
+			} else if (name.equals("Label")) {
+				label = value;
+			} else if (name.equals("Codename")) {
+				codename = value;
+			} else if (name.equals("Date")) {
+				date = value;
+			} else if (name.equals("Architectures")) {
+				architectures = value;
+			} else if (name.equals("Components")) {
+				components = value;
+			} else if (name.equals("MD5Sum") || name.equals("SHA1") || name.equals("SHA256")) {
+				curGroup = name;
 			} else {
 				unknown.add(line);
 			}
@@ -158,7 +160,9 @@ class Release {
 	void save(OutputStream os) throws IOException {
 		BufferedWriter w = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
 		w.append("Origin: ").append(origin).append("\n");
-		w.append("Label: ").append(label).append("\n");
+		if (label != null) {
+			w.append("Label: ").append(label).append("\n");
+		}
 		w.append("Codename: ").append(codename).append("\n");
 		w.append("Date: ").append(date).append("\n");
 		w.append("Architectures: ").append(architectures).append("\n");

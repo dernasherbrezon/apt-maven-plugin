@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aerse.maven</groupId>
 	<artifactId>apt-maven-plugin</artifactId>
@@ -14,6 +15,12 @@
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+			<scope>tet</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.maven.plugins</groupId>
 			<artifactId>maven-gpg-plugin</artifactId>
@@ -74,7 +81,7 @@
 					<releaseProfiles>release</releaseProfiles>
 					<goals>deploy</goals>
 				</configuration>
-			</plugin>		
+			</plugin>
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
@@ -85,7 +92,7 @@
 					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
 					<autoReleaseAfterClose>true</autoReleaseAfterClose>
 				</configuration>
-			</plugin>		
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
@@ -97,12 +104,12 @@
 						<goals>
 							<goal>sign</goal>
 						</goals>
-   					</execution>
+					</execution>
 				</executions>
 				<configuration>
 					<passphraseServerId>gpg.passphrase</passphraseServerId>
 				</configuration>
-			</plugin>		
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
@@ -115,7 +122,7 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>		
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-install-plugin</artifactId>
@@ -134,19 +141,19 @@
 				</configuration>
 				<executions>
 					<execution>
-	                    <id>default-descriptor</id>
-	                    <goals>
-	                        <goal>descriptor</goal>
-	                    </goals>
-	                    <phase>process-classes</phase>
-	                </execution>
-	                <execution>
-	                    <id>help-descriptor</id>
-	                    <goals>
-	                        <goal>helpmojo</goal>
-	                    </goals>
-	                    <phase>process-classes</phase>
-	                </execution>
+						<id>default-descriptor</id>
+						<goals>
+							<goal>descriptor</goal>
+						</goals>
+						<phase>process-classes</phase>
+					</execution>
+					<execution>
+						<id>help-descriptor</id>
+						<goals>
+							<goal>helpmojo</goal>
+						</goals>
+						<phase>process-classes</phase>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>
@@ -168,7 +175,7 @@
 			</plugin>
 		</plugins>
 	</build>
-	
+
 	<licenses>
 		<license>
 			<name>The Apache Software License, Version 2.0</name>
@@ -188,19 +195,19 @@
 		<url>https://github.com/dernasherbrezon/apt-maven-plugin</url>
 		<connection>scm:git:git@github.com/dernasherbrezon/apt-maven-plugin.git</connection>
 		<developerConnection>scm:git:https://github.com/dernasherbrezon/apt-maven-plugin.git</developerConnection>
-	  <tag>apt-maven-plugin-1.9</tag>
-  </scm>
-	
+		<tag>apt-maven-plugin-1.9</tag>
+	</scm>
+
 	<issueManagement>
 		<system>GitHub Issues</system>
 		<url>https://github.com/dernasherbrezon/apt-maven-plugin/issues</url>
 	</issueManagement>
-	
+
 	<distributionManagement>
 		<snapshotRepository>
 			<id>ossrh</id>
 			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
-	
+
 </project>

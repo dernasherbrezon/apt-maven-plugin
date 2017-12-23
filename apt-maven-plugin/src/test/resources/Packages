@@ -1,0 +1,35 @@
+Package: ejdk-8-full
+Version: 20171222204412
+License: unknown
+Vendor: none
+Architecture: armhf
+Maintainer: Andrey Rodionov <info@r2cloud.ru>
+Installed-Size: 
+Section: embedded
+Priority: standard
+Homepage: http://nourlgiven.example.com/
+Filename: pool/main/e/ejdk-8-full/ejdk-8-full_20171222204412_armhf.deb
+Size: 38719416
+SHA1: e652a5712ea39324ceefeed3920e44717ce52b3b
+SHA256: bd317a37a20ebf35c0a2e9ce873fc94010fbc49b41c73e797ef329ca02f59372
+MD5sum: 7118bd9290a4c456d598993754f129a0
+Description: ejdk-8-full
+ jre 8 full
+
+Package: r2cloud-ui
+Version: 1513975757
+License: unknown
+Vendor: none
+Architecture: armhf
+Maintainer: Andrey Rodionov <info@r2cloud.ru>
+Installed-Size: 
+Section: embedded
+Priority: standard
+Homepage: https://github.com/dernasherbrezon/r2cloud-ui
+Filename: pool/r/r2/r2cloud-ui-1513975757.deb
+Size: 1499728
+SHA1: 81f10f851484fa5dca0df014a2aa9cad953e08bc
+SHA256: 34c18936a818e6bc65e0b531377423bef10561d4de83af10ba1041119731ebf2
+MD5sum: f796375fde14992f976c4f5a2e9f7c48
+Description: r2cloud ui
+ Web UI for r2cloud

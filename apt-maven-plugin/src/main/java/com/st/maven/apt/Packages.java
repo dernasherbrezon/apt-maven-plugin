@@ -19,14 +19,18 @@ class Packages {
 		String curLine = null;
 		BufferedReader r = new BufferedReader(new InputStreamReader(is, "UTF-8"));
 		StringBuilder currentControl = new StringBuilder();
-		while ((curLine = r.readLine()) != null) {
-			if (curLine.trim().length() == 0) {
+		while (true) {
+			curLine = r.readLine();
+			if (curLine == null || curLine.trim().length() == 0) {
 				String currentControlStr = currentControl.toString();
 				currentControl = new StringBuilder();
 				if (currentControlStr.trim().length() != 0) {
 					ControlFile curFile = new ControlFile();
 					curFile.load(currentControlStr);
 					contents.put(curFile.getPackageName(), curFile);
+				}
+				if (curLine == null) {
+					break;
 				}
 				continue;
 			}
@@ -45,14 +49,18 @@ class Packages {
 	void add(ControlFile file) {
 		contents.put(file.getPackageName(), file);
 	}
-	
+
 	public void setArchitecture(Architecture architecture) {
 		this.architecture = architecture;
 	}
-	
+
 	public Architecture getArchitecture() {
 		return architecture;
 	}
-	
+
+	// used only in tests
+	Map<String, ControlFile> getContents() {
+		return contents;
+	}
 
 }
