@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -146,9 +147,18 @@ public class AptDeployMojo extends GpgMojo {
 			}
 
 			Release release = loadRelease(w);
-			for (Packages cur : packagesPerArch.values()) {
-				release.getFiles().addAll(uploadPackages(w, cur));
+			//retain old fileinfo
+			Map<String, FileInfo> fileinfoByFilename = new HashMap<>();
+			for (FileInfo cur : release.getFiles()) {
+				fileinfoByFilename.put(cur.getFilename(), cur);
 			}
+			// add and override with new fileinfo
+			for (Packages cur : packagesPerArch.values()) {
+				for (FileInfo resultInfo : uploadPackages(w, cur)) {
+					fileinfoByFilename.put(resultInfo.getFilename(), resultInfo);
+				}
+			}
+			release.setFiles(new HashSet<>(fileinfoByFilename.values()));
 
 			File releaseFile = File.createTempFile("apt", "releaseFile");
 			uploadRelease(w, releaseFile, release);
@@ -157,9 +167,10 @@ public class AptDeployMojo extends GpgMojo {
 				File releaseSignature = signer.generateSignatureForArtifact(releaseFile);
 				getLog().info("uploading: Release.gpg");
 				w.put(releaseSignature, getReleasePath() + ".gpg");
-				
+
 				signer.setArgs(Collections.singletonList("--clearsign"));
 				File clearsigned = signer.generateSignatureForArtifact(releaseFile);
+				getLog().info("uploading: InRelease");
 				w.put(clearsigned, "dists/" + codename + "/InRelease");
 			}
 
