@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 
 class Release {
 
-	private final static Pattern SPACE = Pattern.compile(" ");
+	private final static Pattern SPACE = Pattern.compile("\\s+");
 
 	private String origin;
 	private String label;
@@ -94,9 +94,9 @@ class Release {
 			if (line.length() == 0) {
 				continue;
 			}
-			if (line.charAt(0) == ' ') {
+			if (curLine.charAt(0) == ' ') {
 				if (curGroup != null) {
-					String[] parts = SPACE.split(line.substring(1));
+					String[] parts = SPACE.split(line);
 					if (parts.length != 3) {
 						throw new IOException("unsupported format: " + line + " expected: <checksum> <file size> <file name>");
 					}
