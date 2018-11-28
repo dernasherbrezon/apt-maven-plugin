@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aerse.maven</groupId>
 	<artifactId>apt-maven-plugin</artifactId>
-	<version>1.11-SNAPSHOT</version>
+	<version>1.11</version>
 	<packaging>maven-plugin</packaging>
 	<name>deploy to apt</name>
 	<description>Deploy .deb artifacts into apt-repository. apt-repository is configured by "distribution" section in pom.xml. If there is no apt-repository, it will be created.</description>
@@ -194,7 +194,7 @@
 		<url>https://github.com/dernasherbrezon/apt-maven-plugin</url>
 		<connection>scm:git:git@github.com/dernasherbrezon/apt-maven-plugin.git</connection>
 		<developerConnection>scm:git:https://github.com/dernasherbrezon/apt-maven-plugin.git</developerConnection>
-		<tag>apt-maven-plugin-1.9</tag>
+		<tag>apt-maven-plugin-1.11</tag>
 	</scm>
 
 	<issueManagement>
