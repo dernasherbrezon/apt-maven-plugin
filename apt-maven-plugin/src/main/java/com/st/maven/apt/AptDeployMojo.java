@@ -11,6 +11,7 @@ import java.io.OutputStream;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -156,6 +157,10 @@ public class AptDeployMojo extends GpgMojo {
 				File releaseSignature = signer.generateSignatureForArtifact(releaseFile);
 				getLog().info("uploading: Release.gpg");
 				w.put(releaseSignature, getReleasePath() + ".gpg");
+				
+				signer.setArgs(Collections.singletonList("--clearsign"));
+				File clearsigned = signer.generateSignatureForArtifact(releaseFile);
+				w.put(clearsigned, "dists/" + codename + "/InRelease");
 			}
 
 		} catch (Exception e) {
