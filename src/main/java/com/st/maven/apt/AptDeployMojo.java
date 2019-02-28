@@ -147,7 +147,7 @@ public class AptDeployMojo extends GpgMojo {
 			}
 
 			Release release = loadRelease(w);
-			//retain old fileinfo
+			// retain old fileinfo
 			Map<String, FileInfo> fileinfoByFilename = new HashMap<>();
 			for (FileInfo cur : release.getFiles()) {
 				fileinfoByFilename.put(cur.getFilename(), cur);
@@ -407,18 +407,18 @@ public class AptDeployMojo extends GpgMojo {
 			debStream = new ArchiveStreamFactory().createArchiveInputStream("ar", new FileInputStream(deb));
 			while ((entry = (ArArchiveEntry) debStream.getNextEntry()) != null) {
 				if (entry.getName().equals("control.tar.gz")) {
-					GZIPInputStream gzipInputStream = new GZIPInputStream(debStream);
-					ArchiveInputStream control_tgz = new ArchiveStreamFactory().createArchiveInputStream("tar", gzipInputStream);
-					while ((control_entry = (TarArchiveEntry) control_tgz.getNextEntry()) != null) {
-						getLog().debug("control entry: " + control_entry.getName());
-						if (control_entry.getName().equals("./control")) {
-							ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-							IOUtils.copy(control_tgz, outputStream);
-							String content_string = outputStream.toString("UTF-8");
-							outputStream.close();
-							ControlFile controlFile = new ControlFile();
-							controlFile.load(content_string);
-							return controlFile;
+					try (ArchiveInputStream control_tgz = new ArchiveStreamFactory().createArchiveInputStream("tar", new GZIPInputStream(debStream))) {
+						while ((control_entry = (TarArchiveEntry) control_tgz.getNextEntry()) != null) {
+							getLog().debug("control entry: " + control_entry.getName());
+							if (control_entry.getName().equals("./control")) {
+								ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+								IOUtils.copy(control_tgz, outputStream);
+								String content_string = outputStream.toString("UTF-8");
+								outputStream.close();
+								ControlFile controlFile = new ControlFile();
+								controlFile.load(content_string);
+								return controlFile;
+							}
 						}
 					}
 				}
