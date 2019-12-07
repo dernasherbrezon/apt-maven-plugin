@@ -401,22 +401,22 @@ public class AptDeployMojo extends GpgMojo {
 
 	private ControlFile readControl(File deb) throws MojoExecutionException {
 		ArArchiveEntry entry;
-		TarArchiveEntry control_entry;
+		TarArchiveEntry controlEntry;
 		ArchiveInputStream debStream = null;
 		try {
 			debStream = new ArchiveStreamFactory().createArchiveInputStream("ar", new FileInputStream(deb));
 			while ((entry = (ArArchiveEntry) debStream.getNextEntry()) != null) {
 				if (entry.getName().equals("control.tar.gz")) {
-					try (ArchiveInputStream control_tgz = new ArchiveStreamFactory().createArchiveInputStream("tar", new GZIPInputStream(debStream))) {
-						while ((control_entry = (TarArchiveEntry) control_tgz.getNextEntry()) != null) {
-							getLog().debug("control entry: " + control_entry.getName());
-							if (control_entry.getName().equals("./control")) {
+					try (ArchiveInputStream controlTgz = new ArchiveStreamFactory().createArchiveInputStream("tar", new GZIPInputStream(debStream))) {
+						while ((controlEntry = (TarArchiveEntry) controlTgz.getNextEntry()) != null) {
+							getLog().debug("control entry: " + controlEntry.getName());
+							if (controlEntry.getName().equals("./control") || controlEntry.getName().equals("control")) {
 								ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-								IOUtils.copy(control_tgz, outputStream);
-								String content_string = outputStream.toString("UTF-8");
+								IOUtils.copy(controlTgz, outputStream);
+								String contentString = outputStream.toString("UTF-8");
 								outputStream.close();
 								ControlFile controlFile = new ControlFile();
-								controlFile.load(content_string);
+								controlFile.load(contentString);
 								return controlFile;
 							}
 						}
