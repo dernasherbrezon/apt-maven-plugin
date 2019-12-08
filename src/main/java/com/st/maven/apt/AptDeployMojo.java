@@ -114,7 +114,7 @@ public class AptDeployMojo extends GpgMojo {
 		try {
 			w.connect(repositoryForWagon, info);
 
-			Map<Architecture, Packages> packagesPerArch = new HashMap<Architecture, Packages>();
+			Map<Architecture, Packages> packagesPerArch = new HashMap<>();
 
 			for (File f : deb) {
 				ControlFile controlFile = readControl(f);
@@ -197,11 +197,11 @@ public class AptDeployMojo extends GpgMojo {
 
 	private List<FileInfo> uploadPackages(Wagon w, Packages packages) throws MojoExecutionException, TransferFailedException, ResourceDoesNotExistException, AuthorizationException {
 		OutputStream fos = null;
-		List<FileInfo> result = new ArrayList<FileInfo>();
-		File file;
+		List<FileInfo> result = new ArrayList<>();
+		File tempFile;
 		try {
-			file = File.createTempFile("apt", packages.getArchitecture().name());
-			fos = new FileOutputStream(file);
+			tempFile = File.createTempFile("apt", packages.getArchitecture().name());
+			fos = new FileOutputStream(tempFile);
 			packages.save(fos);
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to write packages", e);
@@ -216,21 +216,21 @@ public class AptDeployMojo extends GpgMojo {
 		}
 
 		try {
-			FileInfo fileInfo = getFileInfo(file);
+			FileInfo fileInfo = getFileInfo(tempFile);
 			fileInfo.setFilename(getPackagesBasePath(packages.getArchitecture()));
 			result.add(fileInfo);
 		} catch (Exception e) {
-			throw new MojoExecutionException("unable to calculate checksum for: " + file.getAbsolutePath(), e);
+			throw new MojoExecutionException("unable to calculate checksum for: " + tempFile.getAbsolutePath(), e);
 		}
 
 		String path = getPackagesPath(packages.getArchitecture());
 		getLog().info("uploading: " + path);
-		w.put(file, path);
+		w.put(tempFile, path);
 
 		// gzipped
 		try {
-			file = File.createTempFile("apt", packages.getArchitecture().name());
-			fos = new GZIPOutputStream(new FileOutputStream(file));
+			tempFile = File.createTempFile("apt", packages.getArchitecture().name());
+			fos = new GZIPOutputStream(new FileOutputStream(tempFile));
 			packages.save(fos);
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to write packages", e);
@@ -245,15 +245,15 @@ public class AptDeployMojo extends GpgMojo {
 		}
 
 		try {
-			FileInfo fileInfo = getFileInfo(file);
+			FileInfo fileInfo = getFileInfo(tempFile);
 			fileInfo.setFilename(getPackagesBasePath(packages.getArchitecture()) + ".gz");
 			result.add(fileInfo);
 		} catch (Exception e) {
-			throw new MojoExecutionException("unable to calculate checksum for: " + file.getAbsolutePath(), e);
+			throw new MojoExecutionException("unable to calculate checksum for: " + tempFile.getAbsolutePath(), e);
 		}
 
 		getLog().info("uploading: " + path + ".gz");
-		w.put(file, path + ".gz");
+		w.put(tempFile, path + ".gz");
 
 		return result;
 	}
