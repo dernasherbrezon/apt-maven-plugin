@@ -26,6 +26,7 @@ import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.ar.ArArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -33,6 +34,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.gpg.AbstractGpgSigner;
 import org.apache.maven.plugin.gpg.GpgMojo;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -117,10 +119,7 @@ public class AptDeployMojo extends GpgMojo {
 			Map<Architecture, Packages> packagesPerArch = new HashMap<>();
 
 			for (File f : deb) {
-				ControlFile controlFile = readControl(f);
-				if (controlFile == null) {
-					throw new MojoExecutionException("invalid .deb format. Missing control file: " + f.getAbsolutePath());
-				}
+				ControlFile controlFile = readControl(getLog(), f);
 				String path = "pool/" + component + "/" + controlFile.getPackageName().charAt(0) + "/" + controlFile.getPackageName() + "/" + controlFile.getPackageName() + "_" + controlFile.getVersion() + "_" + controlFile.getArch() + ".deb";
 				try {
 					FileInfo fileInfo = getFileInfo(f);
@@ -399,42 +398,42 @@ public class AptDeployMojo extends GpgMojo {
 		return result;
 	}
 
-	private ControlFile readControl(File deb) throws MojoExecutionException {
+	static ControlFile readControl(Log log, File deb) throws MojoExecutionException {
 		ArArchiveEntry entry;
 		TarArchiveEntry controlEntry;
-		ArchiveInputStream debStream = null;
-		try {
-			debStream = new ArchiveStreamFactory().createArchiveInputStream("ar", new FileInputStream(deb));
+		try (ArchiveInputStream debStream = new ArchiveStreamFactory().createArchiveInputStream("ar", new FileInputStream(deb))) {
 			while ((entry = (ArArchiveEntry) debStream.getNextEntry()) != null) {
-				if (entry.getName().equals("control.tar.gz")) {
-					try (ArchiveInputStream controlTgz = new ArchiveStreamFactory().createArchiveInputStream("tar", new GZIPInputStream(debStream))) {
-						while ((controlEntry = (TarArchiveEntry) controlTgz.getNextEntry()) != null) {
-							getLog().debug("control entry: " + controlEntry.getName());
-							if (controlEntry.getName().equals("./control") || controlEntry.getName().equals("control")) {
-								ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-								IOUtils.copy(controlTgz, outputStream);
-								String contentString = outputStream.toString("UTF-8");
-								outputStream.close();
-								ControlFile controlFile = new ControlFile();
-								controlFile.load(contentString);
-								return controlFile;
-							}
+				if (!entry.getName().startsWith("control.tar.")) {
+					continue;
+				}
+				InputStream is;
+				if (entry.getName().endsWith(".gz")) {
+					is = new GZIPInputStream(debStream);
+				} else if (entry.getName().endsWith(".xz")) {
+					is = new XZCompressorInputStream(debStream);
+				} else {
+					throw new Exception("unsupported archive type: " + entry.getName());
+				}
+				try (ArchiveInputStream controlTgz = new ArchiveStreamFactory().createArchiveInputStream("tar", is)) {
+					while ((controlEntry = (TarArchiveEntry) controlTgz.getNextEntry()) != null) {
+						log.debug("control entry: " + controlEntry.getName());
+						if (!controlEntry.getName().equals("./control") && !controlEntry.getName().equals("control")) {
+							continue;
 						}
+						ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+						IOUtils.copy(controlTgz, outputStream);
+						String contentString = outputStream.toString("UTF-8");
+						outputStream.close();
+						ControlFile controlFile = new ControlFile();
+						controlFile.load(contentString);
+						return controlFile;
 					}
 				}
 			}
-			return null;
 		} catch (Exception e) {
 			throw new MojoExecutionException("invalid .deb. unable to find control at: " + deb.getAbsolutePath(), e);
-		} finally {
-			if (debStream != null) {
-				try {
-					debStream.close();
-				} catch (IOException e) {
-					getLog().error("unable to close .deb", e);
-				}
-			}
 		}
+		throw new MojoExecutionException("invalid .deb format. Missing control file: " + deb.getAbsolutePath());
 	}
 
 }
