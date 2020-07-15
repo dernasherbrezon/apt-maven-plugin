@@ -3,11 +3,18 @@ package com.st.maven.apt;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.util.UUID;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.junit.Test;
 
 public class AptDeployMojoTest {
+	
+	@Test(expected = MojoExecutionException.class)
+	public void testUnknownFile() throws Exception {
+		AptDeployMojo.readControl(new SystemStreamLog(), new File(UUID.randomUUID().toString()));
+	}
 	
 	@Test
 	public void testControlFile() throws Exception {
