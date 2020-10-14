@@ -49,7 +49,7 @@ class ControlFile {
 	}
 
 	public void load(String str) {
-		contents = str;
+		contents = str.trim();
 		if (contents.charAt(contents.length() - 1) != '\n') {
 			contents += "\n";
 		}

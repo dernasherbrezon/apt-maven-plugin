@@ -1,0 +1,10 @@
+Package: libiio
+Version: 0.21.g481437d
+Section: devel
+Priority: optional
+Architecture: armhf
+Depends: libc6 (>= 2.24), libaio1 (>= 0.3.110), libavahi-client3 (>= 0.6.32), libavahi-common-data (>= 0.6.32), libavahi-common3 (>= 0.6.32), libusb-1.0-0 (>= 2:1.0.21), libxml2 (>= 2.9.4), libserialport0 (>= 0.1.1)
+Installed-Size: 2118
+Maintainer: Engineerzone <https://ez.analog.com/community/linux-device-drivers>
+Description: libiio built using CMake
+
