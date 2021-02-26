@@ -146,6 +146,11 @@ public class AptDeployMojo extends GpgMojo {
 			}
 
 			Release release = loadRelease(w);
+			// append arch and component to the existing
+			release.getComponents().add(component);
+			for (Architecture cur : packagesPerArch.keySet()) {
+				release.getArchitectures().add(cur.name());
+			}
 			// retain old fileinfo
 			Map<String, FileInfo> fileinfoByFilename = new HashMap<>();
 			for (FileInfo cur : release.getFiles()) {
@@ -313,9 +318,7 @@ public class AptDeployMojo extends GpgMojo {
 			release.load(fis);
 		} catch (ResourceDoesNotExistException e) {
 			getLog().info("Release do not exist. creating...");
-			release.setArchitectures("amd64");
 			release.setCodename(codename);
-			release.setComponents(component);
 			release.setLabel(codename);
 			release.setOrigin(codename);
 		} catch (Exception e) {

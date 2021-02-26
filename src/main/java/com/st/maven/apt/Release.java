@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,8 +24,8 @@ class Release {
 	private String label;
 	private String codename;
 	private String date;
-	private String architectures;
-	private String components;
+	private Set<String> architectures = new HashSet<>();
+	private Set<String> components = new HashSet<>();
 	private Set<FileInfo> files = new HashSet<FileInfo>();
 	private List<String> unknown = new ArrayList<String>();
 
@@ -60,19 +61,19 @@ class Release {
 		this.date = date;
 	}
 
-	public String getArchitectures() {
+	public Set<String> getArchitectures() {
 		return architectures;
 	}
 
-	public void setArchitectures(String architectures) {
+	public void setArchitectures(Set<String> architectures) {
 		this.architectures = architectures;
 	}
 
-	public String getComponents() {
+	public Set<String> getComponents() {
 		return components;
 	}
 
-	public void setComponents(String components) {
+	public void setComponents(Set<String> components) {
 		this.components = components;
 	}
 
@@ -133,9 +134,9 @@ class Release {
 			} else if (name.equals("Date")) {
 				date = value;
 			} else if (name.equals("Architectures")) {
-				architectures = value;
+				architectures = splitBySpace(value);
 			} else if (name.equals("Components")) {
-				components = value;
+				components = splitBySpace(value);
 			} else if (name.equals("MD5Sum") || name.equals("SHA1") || name.equals("SHA256")) {
 				curGroup = name;
 			} else {
@@ -144,6 +145,31 @@ class Release {
 		}
 		files = new HashSet<FileInfo>(fileInfoByFilename.size());
 		files.addAll(fileInfoByFilename.values());
+	}
+
+	private static Set<String> splitBySpace(String line) {
+		Set<String> result = new HashSet<>();
+		String[] parts = line.split(" ");
+		for (String cur : parts) {
+			if (cur.trim().length() == 0) {
+				continue;
+			}
+			result.add(cur);
+		}
+		return result;
+	}
+
+	private static String joinBySpace(Set<String> set) {
+		List<String> sorted = new ArrayList<>(set);
+		Collections.sort(sorted);
+		StringBuilder result = new StringBuilder();
+		for (int i = 0; i < sorted.size(); i++) {
+			if (i != 0) {
+				result.append(" ");
+			}
+			result.append(sorted.get(i));
+		}
+		return result.toString();
 	}
 
 	private static String[] splitByColon(String line) {
@@ -165,8 +191,8 @@ class Release {
 		}
 		w.append("Codename: ").append(codename).append("\n");
 		w.append("Date: ").append(date).append("\n");
-		w.append("Architectures: ").append(architectures).append("\n");
-		w.append("Components: ").append(components).append("\n");
+		w.append("Architectures: ").append(joinBySpace(architectures)).append("\n");
+		w.append("Components: ").append(joinBySpace(components)).append("\n");
 		if (!files.isEmpty()) {
 			w.append("MD5Sum:\n");
 			for (FileInfo cur : files) {
