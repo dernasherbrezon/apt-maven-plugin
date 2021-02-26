@@ -233,8 +233,8 @@
 
 	<scm>
 		<url>https://github.com/dernasherbrezon/apt-maven-plugin</url>
-		<connection>scm:git:git@github.com/dernasherbrezon/apt-maven-plugin.git</connection>
-		<developerConnection>scm:git:https://github.com/dernasherbrezon/apt-maven-plugin.git</developerConnection>
+		<connection>scm:git:git@github.com:dernasherbrezon/apt-maven-plugin.git</connection>
+		<developerConnection>scm:git:git@github.com:dernasherbrezon/apt-maven-plugin.git</developerConnection>
 		<tag>apt-maven-plugin-1.9</tag>
 	</scm>
 
