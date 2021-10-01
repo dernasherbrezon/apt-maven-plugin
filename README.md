@@ -26,7 +26,7 @@ And configure `apt-maven-plugin`:
   <plugin>
     <groupId>com.aerse.maven</groupId>
     <artifactId>apt-maven-plugin</artifactId>
-    <version>1.16</version>
+    <version>1.20</version>
     <executions>
       <execution>
         <id>deploy</id>
@@ -40,6 +40,8 @@ And configure `apt-maven-plugin`:
       <codename>repo</codename> <!-- Required. Example: mycompany, repo -->
       <skip>false</skip> <!-- Not required. By default: false -->
       <sign>true</sign> <!-- Not required. By default: false. GPG-sign of "Release" file. Configuration is same as in maven-gpg-plugin -->
+      <keyname>123</keyname> <!-- Not required. Keyname from the gpg keychain -->
+      <passphraseServerId>gpg.passphrase</passphraseServerId> <!-- Not required. Id of server from local settings.xml -->
     </configuration>
   </plugin>
 ...
@@ -56,10 +58,10 @@ And configure `apt-maven-plugin`:
 
 ## Hints
 
-It is possible to specify `.deb` file using command line. Configuration will be taken from `pom.xml`:
+It is possible to deploy multiple `.deb` file using command line. Configuration will be taken from `pom.xml`:
 
 ```
-mvn apt:deploy -Dmaven.apt.file=target/file.deb
+mvn apt:deploy -Dmaven.apt.files=target/*.deb
 ```
 
 If package was signed once (using "sign=true" option), then un-sign (using "sign=false") will cause GPG checksum failure during ```apt-get update```.  Maven Wagon doesn't support "delete" operation, so I cannot remove "Release.gpg" file from apt repository. Please remove "Release.gpg" manually if you have to stop signing.
