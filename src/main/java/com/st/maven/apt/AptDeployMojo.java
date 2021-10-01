@@ -76,6 +76,9 @@ public class AptDeployMojo extends AbstractMojo {
 	 **/
 	@Parameter(property = "gpg.passphrase")
 	private String passphrase;
+	
+    @Parameter
+    private List<String> gpgArguments;
 
 	/**
 	 * Server id to lookup the passphrase under Maven settings.
@@ -137,6 +140,7 @@ public class AptDeployMojo extends AbstractMojo {
 			signConfig.setPassphrase(codename);
 			loadGpgPassphrase();
 			signConfig.setPassphrase(passphrase);
+			signConfig.setGpgArguments(gpgArguments);
 
 			signer = new GpgSignerImpl(signConfig);
 		}
