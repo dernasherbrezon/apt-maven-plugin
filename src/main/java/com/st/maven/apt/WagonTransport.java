@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.wagon.TransferFailedException;
 import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.authorization.AuthorizationException;
@@ -24,9 +25,11 @@ import ru.r2cloud.apt.model.RemoteFile;
 public class WagonTransport implements Transport {
 
 	private final Wagon wagon;
+	private final Log log;
 
-	public WagonTransport(Wagon wagon) {
+	public WagonTransport(Wagon wagon, Log log) {
 		this.wagon = wagon;
+		this.log = log;
 	}
 
 	@Override
@@ -45,7 +48,9 @@ public class WagonTransport implements Transport {
 			callback.save(fos);
 		}
 		save(path, tempFile);
-		tempFile.delete();
+		if (!tempFile.delete()) {
+			log.warn("unable to delete file: " + tempFile.getAbsolutePath());
+		}
 	}
 
 	@Override
@@ -63,7 +68,9 @@ public class WagonTransport implements Transport {
 		try (InputStream is = new BufferedInputStream(new FileInputStream(tempFile))) {
 			callback.load(is);
 		}
-		tempFile.delete();
+		if (!tempFile.delete()) {
+			log.warn("unable to delete file: " + tempFile.getAbsolutePath());
+		}
 	}
 
 	@Override
@@ -73,7 +80,9 @@ public class WagonTransport implements Transport {
 			callback.save(fos);
 		}
 		save(path, tempFile);
-		tempFile.delete();
+		if (!tempFile.delete()) {
+			log.warn("unable to delete file: " + tempFile.getAbsolutePath());
+		}
 	}
 
 	@Override
@@ -91,7 +100,9 @@ public class WagonTransport implements Transport {
 		try (InputStream is = new BufferedInputStream(new GZIPInputStream(new FileInputStream(tempFile)))) {
 			callback.load(is);
 		}
-		tempFile.delete();
+		if (!tempFile.delete()) {
+			log.warn("unable to delete file: " + tempFile.getAbsolutePath());
+		}
 	}
 
 	@Override

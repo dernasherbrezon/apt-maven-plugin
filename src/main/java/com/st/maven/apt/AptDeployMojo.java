@@ -169,7 +169,7 @@ public class AptDeployMojo extends AbstractMojo {
 
 		try {
 			w.connect(repositoryForWagon, info);
-			AptRepository aptRepo = new AptRepositoryImpl(codename, component, signer, new WagonTransport(w));
+			AptRepository aptRepo = new AptRepositoryImpl(codename, component, signer, new WagonTransport(w, getLog()));
 			aptRepo.saveFiles(debs);
 		} catch (Exception e) {
 			throw new MojoExecutionException("unable to save", e);
